@@ -110,4 +110,4 @@ def generate_movie_with_source(request_body: dict) -> Tuple[str, str]:
     if fallback_movie:
         return fallback_movie, "fallback"
 
-    return "fallback"
+    return "No movie found", "fallback"

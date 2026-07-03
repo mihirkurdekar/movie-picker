@@ -67,8 +67,8 @@ class MoviePickerHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    server = ThreadingHTTPServer(("127.0.0.1", 8000), MoviePickerHandler)
-    print("Local movie API listening on http://127.0.0.1:8000/movie")
+    server = ThreadingHTTPServer(("127.0.0.1", 8080), MoviePickerHandler)
+    print("Local movie API listening on http://127.0.0.1:8080/movie")
     server.serve_forever()
 
 

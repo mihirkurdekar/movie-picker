@@ -1,0 +1,28 @@
+# Backend-specific ignores
+/.venv/
+/.pytest_cache/
+/dist/
+/__pycache__/
+*.py[cod]
+*$py.class
+.env
+.env.*
+!.env.example
+!.env.sample
+poetry.lock
+.test_cache/
+*.egg
+*.egg-info/
+
+# Hidden API key files
+*key*
+*secret*
+*credentials*
+*.pem
+*.p12
+
+# Installed packages (if using pip directly)
+lib/
+bin/
+include/
+*.so

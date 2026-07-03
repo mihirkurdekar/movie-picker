@@ -1,0 +1,79 @@
+# Project-level local runtime and generated files
+/venv/
+/.venv/
+/.pytest_cache/
+/node_modules/
+/dist/
+/.vite/
+.coverage/
+*.tsbuildinfo
+/.lambda-build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+egg-info/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.venv/
+env/ENV/
+
+# Node / Frontend
+node_modules/
+.npm/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# Environment files
+.env
+**/.env
+.env.*
+**/.env.*
+!.env.example
+!.env.sample
+
+# Terraform
+.terraform/
+terraform/.terraform/
+.terraformrc
+*.tfstate
+**/terraform.tfstate
+*.tfstate.*
+**/terraform.tfstate.*
+crash.log
+crash.*.log
+*_overrides.tf
+*_overrides.tf.json
+.terraform.tfstate.backup
+**/terraform.tfstate.backup
+.terraform.lock.hcl
+terraform.tfplan
+terraform.tfplan.*
+.terraform.tfvars
+**/terraform.tfvars
+.terraform.tfvars.*
+terraform/lambda.zip
+
+# macOS
+.DS_Store
+
+# API keys and secrets
+*key*
+*api_key*
+*secret*
+*credentials*
+*.pem
+*.p12
+*.crt
+*.credentials

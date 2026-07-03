@@ -1,0 +1,4 @@
+{
+  "httpMethod": "POST",
+  "body": "{\"category\":\"bollywood\",\"difficulty\":\"easy\",\"exclude\":[\"Sholay\"]}"
+}

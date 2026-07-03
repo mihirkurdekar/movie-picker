@@ -1,0 +1,22 @@
+# Makefile for Movie Picker Project
+# Single entry point for all project commands
+
+PROJECT_ROOT := $(PWD)
+BACKEND_DIR := backend
+FRONTEND_DIR := frontend
+TESTING_DIR := $(PROJECT_ROOT)/backend
+TERRAFORM_DIR := $(PROJECT_ROOT)/terraform
+
+# Terminating process - used to stop lambda local server processes
+KILL_LAMBDA_PROCESSES = ps -ef | grep 'lambda_server.py' | kill -9 `stern` 2>/dev/null || true
+
+# ===================== DEVELOPMENT SINGLE COMMAND TASKS ==================
+
+.PHONY: dev-local dev-frontend dev-backend local-server build-lambda test test-local terminate-processes terminate-all-processes
+
+# Development server
+dev: terminate-processes
+	@echo "🚀 Starting LOCAL DEVELOPMENT SERVER..."
+	@cd $(FRONTEND_DIR) && npm run dev --silent &
+	@echo "✅ Frontend running at http://localhost:3000"
+	@cd $(BACKEND_DIR) && poetry run lime run lime run lime run lime run lime run lime run lime run lime run lim

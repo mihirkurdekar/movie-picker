@@ -1,0 +1,19 @@
+# Terraform-specific ignores
+.terraform/
+.terraformrc
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+.terraform.tfstate.backup
+.terraform.lock.hcl
+crash.log
+crash.*.log
+*_override.tf
+*_override.tf.json
+.terraform.tfvars
+.terraform.tfvars.*
+
+# Lambda build artifacts
+/.lambda-build/
+lambda.zip

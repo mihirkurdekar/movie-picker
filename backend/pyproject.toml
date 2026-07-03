@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "movie-picker-backend"
+version = "0.1.0"
+description = "Backend for the movie picker app"
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+google-genai = "^1.0.0"
+requests = "^2.31.0"
+python-dotenv = "^1.0.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

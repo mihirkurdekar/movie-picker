@@ -65,7 +65,7 @@ build-lambda:
 	@mkdir -p $(LAMBDA_BUILD_DIR)/src
 	@cp -R backend/src/. $(LAMBDA_BUILD_DIR)/src/
 	@cp -R frontend/dist/. $(LAMBDA_BUILD_DIR)/frontend/dist/
-	@pip3 install -q -r backend/requirements.txt -t $(LAMBDA_BUILD_DIR) 2>/dev/null || true
+	@cd $(BACKEND_DIR) && pip3 install -r requirements.txt -t $(PWD)/$(LAMBDA_BUILD_DIR)/src
 	@echo "✅ Lambda package ready in $(LAMBDA_BUILD_DIR)/"
 
 # -------------------------------------------------

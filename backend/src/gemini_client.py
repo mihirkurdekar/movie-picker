@@ -1,10 +1,9 @@
 # gemini_client.py
-# OpenRouter API integration for movie suggestions
+# Google Gemini AI integration for movie suggestions
 
 import os
 import random
 import time
-import requests
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -15,87 +14,107 @@ from validation import validate_movie_response
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
-# OpenRouter configuration
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY') or os.getenv('GEMINI_API_KEY')
+# Google Gemini API configuration
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('OPENROUTER_API_KEY')
 MAX_TITLE_LENGTH = 80
 
+# Try new google.genai package first (recommended), fall back to old one
+try:
+    import google.genai as genai
+    USE_NEW_SDK = True
+except ImportError:
+    try:
+        import google.generativeai as genai
+        USE_NEW_SDK = False
+    except ImportError:
+        genai = None
+        USE_NEW_SDK = False
 
-def _get_candidate_models() -> list[str]:
-    return ["gemini-2.0-flash-lite", "gemini-2.0-flash"]
+GEMINI_AVAILABLE = genai is not None and bool(GEMINI_API_KEY)
 
+# Gemini model configuration
+GEMINI_MODEL_NAME = "gemini-2.5-flash"
 
-def _build_prompt(request_body: dict) -> str:
+def build_movie_prompt(request_body: dict) -> str:
+    """Build prompt for movie title generation."""
     nonce = str(random.randint(1000, 9999))
     categories = request_body.get("category", [])
     if isinstance(categories, str):
         categories = [categories]
-    category_label = ", ".join(categories)
+    category_label = ", ".join(categories) if categories else "random"
     excluded = ", ".join(request_body.get("exclude", []))
-    return (
+
+    prompt = (
         "You are picking one movie for a game of dumb charades.\n"
         f"Categories: {category_label}\n"
-        f"Difficulty: {request_body['difficulty']}\n"
-        f"Excluded movies: {excluded}\n"
+        f"Difficulty: {request_body.get('difficulty', 'easy')}\n"
+        f"Excluded movies: {excluded if excluded else 'None'}\n"
         f"Current nonce: {nonce}\n\n"
         "Rules:\n"
         "- Return exactly one real movie title.\n"
         "- No explanation, quotes, or punctuation beyond the title itself.\n"
-        "- The title must be real and not in the excluded list."
+        "- The title must be real and not in the excluded list.\n"
+        "- Examples of good responses: '3 Idiots', 'Sholay', 'Dangal', 'PK', 'Lagaan'\n"
+        "Return only the movie title:"
     )
+    return prompt
 
-
-def get_movie_from_openrouter(request_body: dict) -> Optional[str]:
-    """Call OpenRouter API to generate a movie title."""
-    if not OPENROUTER_API_KEY:
+def get_movie_from_gemini(request_body: dict) -> Optional[str]:
+    """Call Google Gemini API to generate a movie title."""
+    if not GEMINI_AVAILABLE:
         return None
 
     try:
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "HTTP-Referer": "https://localhost:3000",  # Your app URL
-                "X-Title": "Movie Picker App"
-            },
-            json={
-                "model": "meta-llama/Meta-Llama-3.1-8B-Instruct:free",  # Free model
-                "messages": [{
-                    "role": "user",
-                    "content": _build_prompt(request_body)
-                }],
-                "max_tokens": 50,
-                "temperature": 0.8
-            },
-            timeout=15
-        )
+        if USE_NEW_SDK:
+            # New SDK (google.genai)
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model=GEMINI_MODEL_NAME,
+                contents=build_movie_prompt(request_body),
+                config={
+                    "temperature": 0.8,
+                }
+            )
+            movie_title = response.text if response.text else ""
+        else:
+            # Old SDK (google.generativeai)
+            genai.configure(api_key=GEMINI_API_KEY)
+            model = genai.GenerativeModel(
+                model_name=GEMINI_MODEL_NAME,
+                generation_config={
+                    "temperature": 0.8,
+                    "max_output_tokens": 50,
+                }
+            )
+            response = model.generate_content(build_movie_prompt(request_body))
+            movie_title = response.text.strip() if response.text else ""
 
-        if response.status_code == 200:
-            data = response.json()
-            movie_title = data['choices'][0]['message']['content'].strip()
-
+        if movie_title:
+            # Clean up the response - extract just the title
+            movie_title = movie_title.strip().strip('"').strip("'").strip()
+            movie_title = movie_title.split('\n')[0]  # Take first line only
             if validate_movie_response(movie_title, request_body.get('exclude', [])):
                 return movie_title[:MAX_TITLE_LENGTH]
-    except Exception:
+    except Exception as e:
+        print(f"Gemini API error: {e}")
         return None
 
     return None
 
-
 def generate_movie(request_body: dict) -> Optional[str]:
     """Synchronous wrapper with retry."""
     for _ in range(3):  # Try 3 times
-        result = get_movie_from_openrouter(request_body)
+        result = get_movie_from_gemini(request_body)
         if result:
             return result
         time.sleep(0.5)
     return None
 
-
 def generate_movie_with_source(request_body: dict) -> Tuple[str, str]:
-    """Return a movie title and the source, preferring OpenRouter and falling back when needed."""
+    """Return a movie title and the source, preferring Gemini and falling back when needed."""
     movie = generate_movie(request_body)
     if movie:
-        return movie, "openrouter"
+        return movie, "gemini"
 
     categories = request_body.get('category', [])
     if isinstance(categories, str):

@@ -1,0 +1,27 @@
+# Example Terraform variables file for movie-picker deployment
+# Copy this to your preferred name or use the actual tfvars
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Lambda Function Settings
+function_name = "movie-picker"
+role_name = "movie-picker-lambda-role"
+handler = "app.lambda_handler"
+runtime = "python3.12"
+
+# API Configuration
+timeout = 30
+memory_size = 512
+
+# Google Gemini API Key - Required for movie generation
+gemini_api_key = ""
+
+# OpenRouter API Key - Currently not used but kept for compatibility
+openrouter_api_key = ""
+
+# CORS Settings
+allowed_origins = ["*"]
+
+# Environment
+environment = "production"

@@ -1,11 +1,16 @@
 import json
 import os
+import logging
 from pathlib import Path
 from typing import Any, Dict
 
 from validation import validate_request
 from gemini_client import generate_movie_with_source
+from fallback_movies import get_random_fallback_movie
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
 
 def _read_static_asset(path: str) -> tuple[int, dict, str] | None:
     env_dist = os.environ.get("FRONTEND_DIST_DIR")
@@ -49,6 +54,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method = event.get("httpMethod") or event.get("requestContext", {}).get("http", {}).get("method")
     path = event.get("path") or event.get("rawPath") or event.get("requestContext", {}).get("http", {}).get("path") or "/"
 
+    logger.info("Received request: method=%s path=%s", method, path)
+
     if method == "OPTIONS":
         return {"statusCode": 200, "headers": headers, "body": ""}
 
@@ -86,29 +93,54 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     is_valid, error, sanitized = validate_request(body)
     if not is_valid:
+        logger.error("Validation failed: %s", error)
         return {
             "statusCode": 400,
             "headers": headers,
             "body": json.dumps({"error": error}),
         }
 
-    movie, source = generate_movie_with_source(sanitized)
-    categories = sanitized.get("category", [])
-    if isinstance(categories, list):
-        selected_category = categories[0]
-    else:
-        selected_category = categories
+    # --- Enhanced OpenRouter handling with fallback ---
+    try:
+        movie, source = generate_movie_with_source(sanitized)
+        logger.info("Movie generated: movie='%s', source='%s'", movie, source)
+        return {
+            "statusCode": 200,
+            "headers": headers,
+            "body": json.dumps({
+                "movie": movie,
+                "category": sanitized.get("category"),
+                "categories": sanitized.get("categories"),
+                "source": source,
+            }),
+        }
+    except Exception as e:
+        logger.error("OpenRouter call failed: %s", str(e), exc_info=True)
+        # Fallback to static list
+        categories = sanitized.get("category", [])
+        if isinstance(categories, str):
+            categories = [categories]
 
-    return {
-        "statusCode": 200,
-        "headers": headers,
-        "body": json.dumps({
-            "movie": movie,
-            "category": selected_category,
-            "categories": categories,
-            "source": source,
-        }),
-    }
+        fallback_movie = get_random_fallback_movie(categories[0] if categories else "bollywood", sanitized.get("exclude", []))
+
+        if fallback_movie:
+            logger.info("Using fallback movie: %s", fallback_movie)
+            return {
+                "statusCode": 200,
+                "headers": headers,
+                "body": json.dumps({
+                    "movie": fallback_movie,
+                    "category": categories[0] if categories else "bollywood",
+                    "source": "fallback",
+                }),
+            }
+        else:
+            logger.error("No fallback movie available")
+            return {
+                "statusCode": 500,
+                "headers": headers,
+                "body": json.dumps({"error": "Unable to generate a movie"}),
+            }
 
 
 if __name__ == "__main__":

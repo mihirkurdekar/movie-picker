@@ -19,8 +19,61 @@ A single-player web app that suggests a movie title for dumb charades. The React
 - backend/: Python Lambda handler and supporting modules
 - frontend/: Vite + React UI
 - spec.md: product specification and API contract
+- terraform/: Infrastructure-as-code for AWS Lambda + API Gateway
 
-## Local Development
+## Quick Start with Makefile
+
+The easiest way to work with this project is using the Makefile:
+
+```bash
+# Show all available commands
+make help
+
+# Start both dev servers (frontend + backend)
+make dev
+
+# Build and deploy to AWS
+make deploy
+```
+
+### Development Commands
+
+| Command | Description |
+|---------|-------------|
+| `make dev` | Start both frontend (port 3000) and backend (port 8000) |
+| `make dev-frontend` | Start only frontend dev server |
+| `make dev-backend` | Start only backend dev server |
+
+### Build Commands
+
+| Command | Description |
+|---------|-------------|
+| `make build-frontend` | Build frontend for production |
+| `make build-backend` | Install backend dependencies |
+| `make build-lambda` | Package complete Lambda function |
+
+### Deployment Commands
+
+| Command | Description |
+|---------|-------------|
+| `make deploy` | Build and deploy to AWS Lambda |
+| `make destroy` | Destroy all AWS resources |
+
+### Testing Commands
+
+| Command | Description |
+|---------|-------------|
+| `make test` | Test deployed Lambda endpoint |
+
+### Utility Commands
+
+| Command | Description |
+|---------|-------------|
+| `make vars` | Edit Terraform variables (opens editor) |
+| `make clean` | Remove all build artifacts |
+| `make help` | Show this help message |
+
+## Manual Local Development
 
 ### Prerequisites
 
@@ -29,14 +82,6 @@ A single-player web app that suggests a movie title for dumb charades. The React
 - Node.js and npm
 
 ### Backend
-
-Install Poetry if needed:
-
-```bash
-brew install poetry
-```
-
-Then run:
 
 ```bash
 cd backend
@@ -65,7 +110,7 @@ OPENROUTER_API_KEY=your_openrouter_api_key_here
 
 Get an API key from [OpenRouter](https://openrouter.ai/). The free tier includes access to models like `meta-llama/Meta-Llama-3.1-8B-Instruct:free`.
 
-### Local app
+### Local App (Manual)
 
 From the project root, run:
 
@@ -81,7 +126,6 @@ This builds the frontend and serves it from the backend on http://127.0.0.1:8000
 POST /movie
 
 Request body:
-
 ```json
 {
   "category": "bollywood",
@@ -91,7 +135,6 @@ Request body:
 ```
 
 Response:
-
 ```json
 {
   "movie": "Lagaan",
@@ -104,7 +147,7 @@ Response:
 
 ### Terraform
 
-The Terraform scaffold lives in the terraform/ directory. It provisions:
+The Terraform scaffold lives in the `terraform/` directory. It provisions:
 
 - an AWS Lambda function
 - an API Gateway HTTP API route
@@ -115,7 +158,13 @@ The Terraform scaffold lives in the terraform/ directory. It provisions:
 - AWS CLI configured with credentials
 - Terraform installed
 
-### Deploy
+### Deploy via Makefile (Recommended)
+
+```bash
+make deploy
+```
+
+### Deploy Manually
 
 ```bash
 cd terraform
@@ -124,7 +173,21 @@ terraform plan
 terraform apply
 ```
 
-Set the OPENROUTER_API_KEY environment variable for the Lambda function before deployment.
+Set the `OPENROUTER_API_KEY` environment variable for the Lambda function before deployment.
+
+### Testing Deployed Endpoint
+
+```bash
+make test
+```
+
+Or manually:
+```bash
+API_URL=$(cd terraform && terraform output -raw api_url)
+curl -s -X POST "$API_URL/movie" \
+  -H "Content-Type: application/json" \
+  -d '{"category":"bollywood","difficulty":"easy","exclude":["Sholay"]}' | jq
+```
 
 ## Development Notes
 

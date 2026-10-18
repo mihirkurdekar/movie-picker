@@ -4,6 +4,7 @@
 import os
 import random
 import time
+import logging
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -11,6 +12,9 @@ from dotenv import load_dotenv
 
 from fallback_movies import get_random_fallback_movie
 from validation import validate_movie_response
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -33,28 +37,33 @@ except ImportError:
 GEMINI_AVAILABLE = genai is not None and bool(GEMINI_API_KEY)
 
 # Gemini model configuration
-GEMINI_MODEL_NAME = "gemini-2.5-flash"
+GEMINI_MODEL_NAME = "gemini-3.8-flash"
 
 def build_movie_prompt(request_body: dict) -> str:
-    """Build prompt for movie title generation."""
-    nonce = str(random.randint(1000, 9999))
+    """Build prompt for movie title generation with strong diversity constraints."""
+    # Use a random seed and current time to force the model out of its patterns
+    seed = random.randint(1, 1000000)
+    timestamp = int(time.time())
+    
     categories = request_body.get("category", [])
     if isinstance(categories, str):
         categories = [categories]
     category_label = ", ".join(categories) if categories else "random"
-    excluded = ", ".join(request_body.get("exclude", []))
+    excluded = request_body.get("exclude", [])
+    excluded_str = ", ".join(excluded) if excluded else "None"
 
     prompt = (
-        "You are picking one movie for a game of dumb charades.\n"
+        f"System Request ID: {seed}-{timestamp}\n"
+        "You are a movie expert for a game of dumb charades.\n"
         f"Categories: {category_label}\n"
         f"Difficulty: {request_body.get('difficulty', 'easy')}\n"
-        f"Excluded movies: {excluded if excluded else 'None'}\n"
-        f"Current nonce: {nonce}\n\n"
-        "Rules:\n"
-        "- Return exactly one real movie title.\n"
-        "- No explanation, quotes, or punctuation beyond the title itself.\n"
-        "- The title must be real and not in the excluded list.\n"
-        "- Examples of good responses: '3 Idiots', 'Sholay', 'Dangal', 'PK', 'Lagaan'\n"
+        f"ALREADY SHOWN (Do NOT pick these): {excluded_str}\n\n"
+        "CRITICAL RULES:\n"
+        "1. Pick a movie that is NOT in the 'ALREADY SHOWN' list.\n"
+        "2. AVOID the most obvious common picks (e.g., avoid 'Sholay' or '3 Idiots' if they appear too often).\n"
+        "3. Pick a variety of movies from different eras and genres within the category.\n"
+        "4. Return ONLY the real movie title. No quotes, no explanation, no punctuation.\n"
+        "5. The movie must be real and fit the requested difficulty.\n\n"
         "Return only the movie title:"
     )
     return prompt
@@ -62,27 +71,28 @@ def build_movie_prompt(request_body: dict) -> str:
 def get_movie_from_gemini(request_body: dict) -> Optional[str]:
     """Call Google Gemini API to generate a movie title."""
     if not GEMINI_AVAILABLE:
+        logger.warning("Gemini not available: Missing API key or SDK")
         return None
 
     try:
         if USE_NEW_SDK:
-            # New SDK (google.genai)
             client = genai.Client(api_key=GEMINI_API_KEY)
+            model_id = f"models/{GEMINI_MODEL_NAME}" if not GEMINI_MODEL_NAME.startswith("models/") else GEMINI_MODEL_NAME
+            
             response = client.models.generate_content(
-                model=GEMINI_MODEL_NAME,
+                model=model_id,
                 contents=build_movie_prompt(request_body),
                 config={
-                    "temperature": 0.8,
+                    "temperature": 1.0, # Increased temperature for more randomness/diversity
                 }
             )
             movie_title = response.text if response.text else ""
         else:
-            # Old SDK (google.generativeai)
             genai.configure(api_key=GEMINI_API_KEY)
             model = genai.GenerativeModel(
                 model_name=GEMINI_MODEL_NAME,
                 generation_config={
-                    "temperature": 0.8,
+                    "temperature": 1.0,
                     "max_output_tokens": 50,
                 }
             )
@@ -90,23 +100,27 @@ def get_movie_from_gemini(request_body: dict) -> Optional[str]:
             movie_title = response.text.strip() if response.text else ""
 
         if movie_title:
-            # Clean up the response - extract just the title
             movie_title = movie_title.strip().strip('"').strip("'").strip()
-            movie_title = movie_title.split('\n')[0]  # Take first line only
+            movie_title = movie_title.split('\n')[0]
+            
+            # Double check exclusion list locally
             if validate_movie_response(movie_title, request_body.get('exclude', [])):
                 return movie_title[:MAX_TITLE_LENGTH]
+            else:
+                logger.info("Gemini suggested an excluded movie: %s", movie_title)
     except Exception as e:
-        print(f"Gemini API error: {e}")
+        logger.error("Gemini API error: %s", e, exc_info=True)
         return None
 
     return None
 
 def generate_movie(request_body: dict) -> Optional[str]:
-    """Synchronous wrapper with retry."""
-    for _ in range(3):  # Try 3 times
+    """Synchronous wrapper with retry and fallback detection."""
+    for i in range(3):
         result = get_movie_from_gemini(request_body)
         if result:
             return result
+        logger.info("Gemini attempt %d failed, retrying...", i + 1)
         time.sleep(0.5)
     return None
 

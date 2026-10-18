@@ -3,6 +3,7 @@ name = "movie-picker-backend"
 version = "0.1.0"
 description = "Backend for the movie picker app"
 authors = ["Your Name <you@example.com>"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"

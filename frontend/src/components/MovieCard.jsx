@@ -1,21 +1,74 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, CheckCircle2 } from 'lucide-react';
 
 function MovieCard({ title, revealed, onReveal }) {
   return (
-    <div className="mx-auto w-full max-w-xl rounded-3xl border border-fuchsia-400/20 bg-gradient-to-br from-slate-900/90 to-purple-950/90 p-6 text-center shadow-[0_20px_60px_rgba(168,85,247,0.18)]">
-      <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-fuchsia-300">
-        Current pick
-      </p>
-      <h2 className={`mb-5 text-3xl font-bold text-white sm:text-4xl transition-all duration-300 ${revealed ? 'scale-100' : 'scale-95 opacity-80'}`}>
-        {revealed ? title : '???'}
-      </h2>
-      <button
-        onClick={onReveal}
-        className={`rounded-full border px-4 py-2 text-sm font-semibold transition duration-200 ${revealed ? 'border-emerald-400/30 bg-emerald-500/15 text-emerald-100 shadow-lg shadow-emerald-500/10' : 'border-cyan-400/20 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20'}`}
+    <div className="w-full max-w-xl mx-auto relative">
+      {/* Ambient Background Glow */}
+      <div className="absolute -inset-4 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-cyan-600 rounded-[3rem] blur-2xl opacity-20 animate-pulse" />
+      
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative overflow-hidden rounded-[3rem] border border-white/20 bg-slate-900/80 backdrop-blur-2xl p-10 text-center shadow-2xl"
       >
-        {revealed ? 'Title revealed' : 'Reveal Title'}
-      </button>
+        <p className="mb-8 text-xs font-black uppercase tracking-[0.4em] text-fuchsia-400 opacity-80">
+          The Chosen Title
+        </p>
+        
+        <div className="relative h-32 flex items-center justify-center mb-12">
+          <AnimatePresence mode="wait">
+            {!revealed ? (
+              <motion.div
+                key="hidden"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="text-7xl font-black text-slate-800 italic tracking-tighter"
+              >
+                ???
+              </motion.div>
+            ) : (
+              <motion.div
+                key="revealed"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+                className="text-4xl font-black text-white tracking-tight sm:text-6xl bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent"
+              >
+                {title}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="flex justify-center">
+          {!revealed ? (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onReveal}
+              className="flex items-center gap-3 px-8 py-4 rounded-full bg-white text-slate-900 font-bold shadow-xl shadow-white/10 transition-all"
+            >
+              <Eye size={20} />
+              <span className="text-sm">Reveal Title</span>
+            </motion.button>
+          ) : (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-3 px-8 py-4 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold"
+            >
+              <CheckCircle2 size={20} />
+              <span className="text-sm">Revealed!</span>
+            </motion.div>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }
+
 export default MovieCard;

@@ -1,14 +1,19 @@
 import React from 'react';
+import { motion } from 'framer-motion';
+import { RotateCcw } from 'lucide-react';
 
 function ResetButton({ onClick, disabled }) {
   return (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.1)' }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
       disabled={disabled}
-      className="rounded-2xl border border-white/15 bg-slate-800/90 px-4 py-3 font-semibold text-slate-100 transition duration-200 hover:bg-slate-700 hover:shadow-md hover:shadow-slate-900/40 disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 font-semibold text-slate-300 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
     >
-      Reset
-    </button>
+      <RotateCcw size={18} />
+      <span>Reset</span>
+    </motion.button>
   );
 }
 

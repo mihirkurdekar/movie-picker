@@ -1,13 +1,14 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 const CATEGORIES = [
-  { value: 'bollywood', label: 'Bollywood', accent: 'from-rose-500 to-pink-500' },
-  { value: 'hollywood', label: 'Hollywood', accent: 'from-sky-500 to-cyan-500' },
-  { value: 'tollywood', label: 'Tollywood', accent: 'from-emerald-500 to-lime-500' },
-  { value: 'kollywood', label: 'Kollywood', accent: 'from-amber-500 to-orange-500' },
-  { value: 'punjabi', label: 'Punjabi', accent: 'from-fuchsia-500 to-violet-500' },
-  { value: 'mixed_indian', label: 'Mixed-Indian', accent: 'from-indigo-500 to-purple-500' },
-  { value: 'random', label: 'Random', accent: 'from-slate-500 to-slate-600' },
+  { value: 'bollywood', label: 'Bollywood', accent: 'bg-rose-500 shadow-rose-500/30' },
+  { value: 'hollywood', label: 'Hollywood', accent: 'bg-sky-500 shadow-sky-500/30' },
+  { value: 'tollywood', label: 'Tollywood', accent: 'bg-emerald-500 shadow-emerald-500/30' },
+  { value: 'kollywood', label: 'Kollywood', accent: 'bg-amber-500 shadow-amber-500/30' },
+  { value: 'punjabi', label: 'Punjabi', accent: 'bg-fuchsia-500 shadow-fuchsia-500/30' },
+  { value: 'mixed_indian', label: 'Mixed-Indian', accent: 'bg-indigo-500 shadow-indigo-500/30' },
+  { value: 'random', label: 'Random', accent: 'bg-slate-500 shadow-slate-500/30' },
 ];
 
 function CategorySelector({ value, onChange }) {
@@ -15,34 +16,36 @@ function CategorySelector({ value, onChange }) {
     const selected = value.includes(category)
       ? value.filter((item) => item !== category)
       : [...value, category];
-
     onChange(selected);
   };
 
   return (
-    <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-200">
-        Categories <span className="text-xs font-normal text-slate-400">(pick one or more)</span>
-      </label>
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map((category) => {
-          const selected = value.includes(category.value);
-          return (
-            <button
-              key={category.value}
-              type="button"
-              onClick={() => toggleCategory(category.value)}
-              className={`rounded-full border px-3 py-2 text-sm font-medium transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg ${
-                selected
-                  ? `border-transparent bg-gradient-to-r ${category.accent} text-white shadow-lg shadow-black/20 scale-[1.02]`
-                  : 'border-white/10 bg-slate-800/70 text-slate-200 hover:bg-slate-700/80'
-              }`}
-            >
-              {category.label}
-            </button>
-          );
-        })}
-      </div>
+    <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+      {CATEGORIES.map((category) => {
+        const isSelected = value.includes(category.value);
+        return (
+          <motion.button
+            key={category.value}
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => toggleCategory(category.value)}
+            className={`relative px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+              isSelected
+                ? `${category.accent} text-white shadow-md scale-105 ring-1 ring-white/30`
+                : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10 hover:text-slate-200'
+            }`}
+          >
+            <span className="relative z-10">{category.label}</span>
+            
+            {isSelected && (
+              <div 
+                className="absolute inset-0 rounded-2xl blur-md opacity-30" 
+                style={{ backgroundColor: 'currentColor' }}
+              />
+            )}
+          </motion.button>
+        );
+      })}
     </div>
   );
 }

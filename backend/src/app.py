@@ -56,6 +56,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     logger.info("Received request: method=%s path=%s", method, path)
 
+    # Health check endpoint
+    if path == "/health":
+        return {
+            "statusCode": 200,
+            "headers": headers,
+            "body": json.dumps({"status": "healthy"}),
+        }
+
     if method == "OPTIONS":
         return {"statusCode": 200, "headers": headers, "body": ""}
 
@@ -80,67 +88,83 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return {
             "statusCode": 405,
             "headers": headers,
-            "body": json.dumps({"error": "method_not_allowed"}),
+            "body": json.dumps({"error": "method_not_allowed", "message": "Use POST method to generate a movie"}),
         }
 
-    if isinstance(event.get("body"), str):
+    # Only process POST requests for movie generation
+    if method == "POST" and path == "/movie":
         try:
-            body = json.loads(event["body"])
-        except json.JSONDecodeError:
-            body = {}
-    else:
-        body = event.get("body") or {}
+            body = event.get("body") or {}
+            if isinstance(body, str):
+                body = json.loads(body)
+        except json.JSONDecodeError as e:
+            logger.error("Invalid JSON body: %s", str(e))
+            return {
+                "statusCode": 400,
+                "headers": headers,
+                "body": json.dumps({"error": "Invalid JSON in request body"}),
+            }
 
-    is_valid, error, sanitized = validate_request(body)
-    if not is_valid:
-        logger.error("Validation failed: %s", error)
-        return {
-            "statusCode": 400,
-            "headers": headers,
-            "body": json.dumps({"error": error}),
-        }
+        is_valid, error, sanitized = validate_request(body)
+        if not is_valid:
+            logger.error("Validation failed: %s", error)
+            return {
+                "statusCode": 400,
+                "headers": headers,
+                "body": json.dumps({"error": error}),
+            }
 
-    # --- Enhanced OpenRouter handling with fallback ---
-    try:
-        movie, source = generate_movie_with_source(sanitized)
-        logger.info("Movie generated: movie='%s', source='%s'", movie, source)
-        return {
-            "statusCode": 200,
-            "headers": headers,
-            "body": json.dumps({
-                "movie": movie,
-                "category": sanitized.get("category"),
-                "categories": sanitized.get("categories"),
-                "source": source,
-            }),
-        }
-    except Exception as e:
-        logger.error("OpenRouter call failed: %s", str(e), exc_info=True)
-        # Fallback to static list
-        categories = sanitized.get("category", [])
-        if isinstance(categories, str):
-            categories = [categories]
-
-        fallback_movie = get_random_fallback_movie(categories[0] if categories else "bollywood", sanitized.get("exclude", []))
-
-        if fallback_movie:
-            logger.info("Using fallback movie: %s", fallback_movie)
+        # --- Enhanced OpenRouter handling with fallback ---
+        try:
+            movie, source = generate_movie_with_source(sanitized)
+            logger.info("Movie generated: movie='%s', source='%s'", movie, source)
             return {
                 "statusCode": 200,
                 "headers": headers,
                 "body": json.dumps({
-                    "movie": fallback_movie,
-                    "category": categories[0] if categories else "bollywood",
-                    "source": "fallback",
+                    "movie": movie,
+                    "category": sanitized.get("category"),
+                    "categories": sanitized.get("categories"),
+                    "source": source,
                 }),
             }
-        else:
-            logger.error("No fallback movie available")
-            return {
-                "statusCode": 500,
-                "headers": headers,
-                "body": json.dumps({"error": "Unable to generate a movie"}),
-            }
+        except Exception as e:
+            logger.error("OpenRouter call failed: %s", str(e), exc_info=True)
+            # Fallback to static list
+            categories = sanitized.get("category", [])
+            if isinstance(categories, str):
+                categories = [categories]
+
+            fallback_movie = get_random_fallback_movie(
+                categories[0] if categories else "bollywood",
+                sanitized.get("exclude", [])
+            )
+
+            if fallback_movie:
+                logger.info("Using fallback movie: %s", fallback_movie)
+                return {
+                    "statusCode": 200,
+                    "headers": headers,
+                    "body": json.dumps({
+                        "movie": fallback_movie,
+                        "category": categories[0] if categories else "bollywood",
+                        "source": "fallback",
+                    }),
+                }
+            else:
+                logger.error("No fallback movie available")
+                return {
+                    "statusCode": 500,
+                    "headers": headers,
+                    "body": json.dumps({"error": "Unable to generate a movie"}),
+                }
+
+    # Default response for unmatched routes
+    return {
+        "statusCode": 404,
+        "headers": headers,
+        "body": json.dumps({"error": "Not found", "message": "Invalid endpoint or method"}),
+    }
 
 
 if __name__ == "__main__":
